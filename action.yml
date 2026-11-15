@@ -1,0 +1,64 @@
+name: 'Stet: guardrails for AI coding agents'
+description: 'Fail PRs where AI coding agents changed files outside the task, touched protected paths or broke locked behaviours.'
+author: 'Shamaz Khan'
+branding:
+  icon: 'shield'
+  color: 'yellow'
+
+inputs:
+  guard:
+    description: 'Run stet guard (files changed outside the task scope or in protected paths).'
+    required: false
+    default: 'true'
+  check:
+    description: 'Run stet check (locked behaviours). Install your project dependencies before this step.'
+    required: false
+    default: 'true'
+  warn-only:
+    description: 'Report guard violations as warnings instead of failing the job.'
+    required: false
+    default: 'false'
+  only:
+    description: 'Run only these locks, e.g. "L1,L3". Default: all.'
+    required: false
+    default: ''
+  base:
+    description: 'Commit or branch to compare against. Default: the merge base with the pull request target branch (or the previous commit on push).'
+    required: false
+    default: ''
+  version:
+    description: 'stet-cli version to run.'
+    required: false
+    default: 'latest'
+  node-version:
+    description: 'Node.js version (18 or newer).'
+    required: false
+    default: '20'
+  working-directory:
+    description: 'Folder that contains .stet/ (for monorepos).'
+    required: false
+    default: '.'
+
+outputs:
+  result:
+    description: '"pass", "guard-failed", "check-failed" or "failed".'
+    value: ${{ steps.stet.outputs.result }}
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: ${{ inputs.node-version }}
+    - id: stet
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        STET_GUARD: ${{ inputs.guard }}
+        STET_CHECK: ${{ inputs.check }}
+        STET_WARN: ${{ inputs.warn-only }}
+        STET_ONLY: ${{ inputs.only }}
+        STET_BASE: ${{ inputs.base }}
+        STET_VERSION: ${{ inputs.version }}
+        STET_PUSH_BEFORE: ${{ github.event.before }}
+      run: bash "$GITHUB_ACTION_PATH/stet-action.sh"
